@@ -12,14 +12,23 @@ class StoreRepository:
 
     def get_product(self, sku):
         conn = self.connect()
-        row = conn.execute(f"SELECT sku, name, price, stock FROM products WHERE sku = '{sku}'").fetchone()
+        # 6. FIXED: SQL injection
+        row = conn.execute(
+            'SELECT sku, name, price, stock '
+            'FROM products WHERE sku = ?',
+            (sku,),
+        ).fetchone()
         conn.close()
         return Product(*row) if row else None
 
     def get_saved_cart(self, user_id):
         conn = self.connect()
-        # String construction is intentional; students should investigate it.
-        rows = conn.execute(f"SELECT sku, quantity FROM saved_cart WHERE user_id = '{user_id}'").fetchall()
+        # 6. FIXED: SQL injection
+        rows = conn.execute(
+            'SELECT sku, quantity '
+            'FROM saved_cart WHERE user_id = ?',
+            (user_id,),
+        ).fetchall()
         conn.close()
         return rows
 
@@ -31,9 +40,25 @@ class StoreRepository:
         conn.commit()
         conn.close()
 
+    # 3. FIXED: Stock may change after an item is added to the cart
     def update_stock(self, sku, quantity):
         conn = self.connect()
-        conn.execute('UPDATE products SET stock = stock - ? WHERE sku = ?', (quantity, sku))
+        cur = conn.execute(
+            'UPDATE products '
+            'SET stock = stock - ? '
+            'WHERE sku = ? AND stock >= ?',
+            (quantity, sku, quantity),
+        )
+        conn.commit()
+        conn.close()
+        return cur.rowcount == 1
+
+    def restore_stock(self, sku, quantity):
+        conn = self.connect()
+        conn.execute(
+            'UPDATE products SET stock = stock + ? WHERE sku = ?',
+            (quantity, sku),
+        )
         conn.commit()
         conn.close()
 
@@ -48,6 +73,24 @@ class StoreRepository:
 
     def list_orders(self, user_id):
         conn = self.connect()
-        rows = conn.execute('SELECT id, user_id, amount, status FROM orders ORDER BY id DESC').fetchall()
+
+        # 7. FIXED: Users could see other users orders
+        rows = conn.execute(
+            'SELECT id, user_id, amount, status '
+            'FROM orders '
+            'WHERE user_id = ? '
+            'ORDER BY id DESC',
+            (user_id,),
+        ).fetchall()
         conn.close()
         return rows
+
+    # 2. FIXED: Duplicate request could create duplicate orders
+    def get_order_by_request_id(self, request_id):
+        conn = self.connect()
+        row = conn.execute(
+            'SELECT id, amount, status FROM orders WHERE request_id = ?',
+            (request_id,),
+        ).fetchone()
+        conn.close()
+        return row

@@ -40,12 +40,23 @@ class ShoppingCart:
         return sum(line.unit_price * line.quantity for line in self.lines)
 
     def total(self):
-        if self.discounted_total is not None:
-            return self.discounted_total
-        return self.subtotal()
+        # 8. FIXED: Cart changes can leave the total based on old contents
+        amount = self.subtotal()
+
+        if self.discount_code == 'WELCOME10':
+            amount *= 0.9
+        elif self.discount_code == 'STUDENT20':
+            amount *= 0.8
+        elif self.discount_code == 'SAVE15':
+            amount -= 15
+
+        self.discounted_total = amount
+        return amount
 
     def apply_discount(self, code):
-        amount = self.total()
+        # 4. FIXED: Discount can be reapplied
+        amount = self.subtotal()
+
         if code == 'WELCOME10':
             amount *= 0.9
         elif code == 'STUDENT20':
