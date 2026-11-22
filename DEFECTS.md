@@ -73,8 +73,7 @@
 
 ## Test Result
 
-Current smoke-test result:
+13 unit tests + 2 smoke tests:
+<img width="645" height="68" alt="image" src="https://github.com/user-attachments/assets/7adecf7f-54fc-4b0c-ba34-d728ba15415c" />
 
-```text
-2 passed
-```
+
